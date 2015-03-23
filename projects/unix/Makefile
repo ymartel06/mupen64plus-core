@@ -434,6 +434,8 @@ SOURCE = \
 	$(SRCDIR)/main/sra_file.c \
 	$(SRCDIR)/main/workqueue.c \
 	$(SRCDIR)/memory/memory.c \
+	$(SRCDIR)/network/bitstream.c \
+	$(SRCDIR)/network/network.c \
 	$(SRCDIR)/pi/cart_rom.c \
 	$(SRCDIR)/pi/flashram.c \
 	$(SRCDIR)/pi/pi_controller.c \

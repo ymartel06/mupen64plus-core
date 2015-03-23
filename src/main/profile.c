@@ -32,6 +32,9 @@ static long long int last_start[NUM_TIMED_SECTIONS];
 
 #if defined(WIN32) && !defined(__MINGW32__)
   // timing
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
   #include <windows.h>
   static long long int get_time(void)
   {

@@ -104,6 +104,6 @@ m64p_error main_volume_mute(void);
 int        main_volume_get_muted(void);
 
 m64p_error main_reset(int do_hard_reset);
-
+int        main_get_current_frame(void);
 #endif /* __MAIN_H__ */
 

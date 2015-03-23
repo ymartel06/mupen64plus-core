@@ -30,6 +30,11 @@
 /* necessary headers */
 #include <stdint.h>
 #if defined(WIN32)
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
   #include <windows.h>
 #endif
 
@@ -362,5 +367,27 @@ typedef struct {
   m64p_error (*VidExtFuncResizeWindow)(int, int);
 } m64p_video_extension_functions;
 
+
+typedef enum {
+	NO_NETWORK = 0,
+	IS_SERVER,
+	IS_CLIENT,
+} network_mode;
+
+typedef enum {
+	NOTHING = 0,
+	DISCONNECT,
+	NET_INPUT,
+	WELCOME,
+	WELCOME_BACK,
+	GAME_START
+} network_message;
+
+typedef enum {
+	WRONG_CORE_VERSION = 0,
+	WRONG_ROM,
+} disconnection_reason;
+
 #endif /* define M64P_TYPES_H */
+
 

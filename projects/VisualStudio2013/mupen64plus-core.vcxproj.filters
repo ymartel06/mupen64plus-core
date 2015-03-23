@@ -64,6 +64,9 @@
     <Filter Include="r4300\new_dynarec\arm">
       <UniqueIdentifier>{873c3262-2472-407c-8451-67cbb5f78bae}</UniqueIdentifier>
     </Filter>
+    <Filter Include="network">
+      <UniqueIdentifier>{69a6ea86-f8ae-47aa-8b6a-b8e679c78da5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\ai\ai_controller.c">
@@ -402,6 +405,12 @@
     <ClCompile Include="..\..\src\debugger\dbg_memory.c">
       <Filter>debugger</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\network\network.c">
+      <Filter>network</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\network\bitstream.c">
+      <Filter>network</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\ai\ai_controller.h">
@@ -724,6 +733,12 @@
     </ClInclude>
     <ClInclude Include="..\..\src\debugger\dbg_types.h">
       <Filter>debugger</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\network\network.h">
+      <Filter>network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\network\bitstream.h">
+      <Filter>network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -22,6 +22,8 @@
 #include "emulate_game_controller_via_input_plugin.h"
 #include "plugin.h"
 
+#include "main/main.h"
+#include "network/network.h"
 #include "api/m64p_plugin.h"
 #include "si/game_controller.h"
 
@@ -50,10 +52,33 @@ int egcvip_is_connected(void* opaque, enum pak_type* pak)
 uint32_t egcvip_get_input(void* opaque)
 {
     BUTTONS keys = { 0 };
-    int channel = *(int*)opaque;
 
-    if (input.getKeys)
-        input.getKeys(channel, &keys);
+	int channel = *(int*)opaque;
+
+	if (current_network_mode == NO_NETWORK || current_network_mode == IS_SERVER)
+	{	
+		if (input.getKeys)
+			input.getKeys(channel, &keys);
+	}
+
+	switch (current_network_mode)
+	{
+	case IS_SERVER:
+		if (channel == 0)
+			send_input(main_get_current_frame(), keys.Value);
+		break;
+	case IS_CLIENT:
+		if (channel == 0)
+		{
+			uint32_t in = 0;
+			read_client_socket();
+			in = get_server_input();
+			reset_server_input();		
+			return in;
+		}
+		break;
+
+	}
 
     return keys.Value;
 

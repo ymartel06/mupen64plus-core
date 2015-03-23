@@ -54,6 +54,7 @@
 #include "sra_file.h"
 #include "util.h"
 
+#include "network/network.h"
 #include "ai/ai_controller.h"
 #include "memory/memory.h"
 #include "osal/files.h"
@@ -864,6 +865,8 @@ static void connect_all(
 m64p_error main_run(void)
 {
     size_t i;
+	int network_mode = 0;
+	int network_status = 1;
     unsigned int disable_extra_mem;
     struct eep_file eep;
     struct fla_file fla;
@@ -1000,16 +1003,47 @@ m64p_error main_run(void)
         init_debugger();
 #endif
 
-    /* Startup message on the OSD */
-    osd_new_message(OSD_MIDDLE_CENTER, "Mupen64Plus Started...");
+	/* setup network if necessary */
+	/*
+	bool isClient = ConfigGetParamBool(g_CoreConfig, "IsClient");
+	bool isServer = ConfigGetParamBool(g_CoreConfig, "IsServer");
+	*/
+	network_mode = ConfigGetParamInt(g_CoreConfig, "NetworkMode");
+	if (network_mode > NO_NETWORK)
+	{
+		int port = ConfigGetParamInt(g_CoreConfig, "ServerPort");
+		if (network_mode == IS_SERVER)
+		{			
+			network_status = launch_server(port);
+		}
+		if (network_mode == IS_CLIENT)
+		{
+			const char* ip = ConfigGetParamString(g_CoreConfig, "ServerIp");
+			network_status = launch_client(ip, port);
+		}
+	}
 
-    g_EmulatorRunning = 1;
-    StateChanged(M64CORE_EMU_STATE, M64EMU_RUNNING);
 
-    /* call r4300 CPU core and run the game */
-    r4300_reset_hard();
-    r4300_reset_soft();
-    r4300_execute();
+	if (network_status > 0)
+	{
+		/* Startup message on the OSD */
+		osd_new_message(OSD_MIDDLE_CENTER, "Mupen64Plus Started...");
+
+		g_EmulatorRunning = 1;
+		StateChanged(M64CORE_EMU_STATE, M64EMU_RUNNING);
+
+		/* call r4300 CPU core and run the game */
+		r4300_reset_hard();
+		r4300_reset_soft();
+		r4300_execute();
+	}
+
+
+	/* cleanup network */
+	if (network_mode > 0)
+	{
+		cleanup_network();
+	}
 
     /* now begin to shut down */
 #ifdef WITH_LIRC
@@ -1078,4 +1112,9 @@ void main_stop(void)
         debugger_step();
     }
 #endif        
+}
+
+int main_get_current_frame(void)
+{
+	return l_CurrentFrame;
 }

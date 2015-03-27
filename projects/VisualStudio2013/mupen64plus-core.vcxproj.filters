@@ -405,10 +405,13 @@
     <ClCompile Include="..\..\src\debugger\dbg_memory.c">
       <Filter>debugger</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\network\bitstream.c">
+      <Filter>network</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\network\network.c">
       <Filter>network</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\network\bitstream.c">
+    <ClCompile Include="..\..\src\network\emulate_game_controller_network.c">
       <Filter>network</Filter>
     </ClCompile>
   </ItemGroup>
@@ -734,10 +737,13 @@
     <ClInclude Include="..\..\src\debugger\dbg_types.h">
       <Filter>debugger</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\network\bitstream.h">
+      <Filter>network</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\src\network\network.h">
       <Filter>network</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\network\bitstream.h">
+    <ClInclude Include="..\..\src\network\emulate_game_controller_network.h">
       <Filter>network</Filter>
     </ClInclude>
   </ItemGroup>

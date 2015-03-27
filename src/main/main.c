@@ -57,6 +57,7 @@
 #include "network/network.h"
 #include "ai/ai_controller.h"
 #include "memory/memory.h"
+#include "network/emulate_game_controller_network.h"
 #include "osal/files.h"
 #include "osal/preproc.h"
 #include "osd/osd.h"
@@ -96,7 +97,7 @@ m64p_frame_callback g_FrameCallback = NULL;
 int         g_MemHasBeenBSwapped = 0;   // store byte-swapped flag so we don't swap twice when re-playing game
 int         g_EmulatorRunning = 0;      // need separate boolean to tell if emulator is running, since --nogui doesn't use a thread
 
-ALIGN(16, uint32_t g_rdram[RDRAM_MAX_SIZE/4]);
+ALIGN(16, uint32_t g_rdram[RDRAM_MAX_SIZE / 4]);
 struct ai_controller g_ai;
 struct pi_controller g_pi;
 struct ri_controller g_ri;
@@ -132,7 +133,8 @@ static const char *get_savepathdefault(const char *configpath)
     if (!configpath || (strlen(configpath) == 0)) {
         snprintf(path, 1024, "%ssave%c", ConfigGetUserDataPath(), OSAL_DIR_SEPARATORS[0]);
         path[1023] = 0;
-    } else {
+    }
+    else {
         snprintf(path, 1024, "%s%c", configpath, OSAL_DIR_SEPARATORS[0]);
         path[1023] = 0;
     }
@@ -187,7 +189,7 @@ void main_message(m64p_msg_level level, unsigned int corner, const char *format,
     char buffer[2049];
     va_start(ap, format);
     vsnprintf(buffer, 2047, format, ap);
-    buffer[2048]='\0';
+    buffer[2048] = '\0';
     va_end(ap);
 
     /* send message to on-screen-display if enabled */
@@ -221,16 +223,16 @@ int main_set_core_defaults(void)
         ConfigOpenSection("Core", &g_CoreConfig);
         bSaveConfig = 1;
     }
-    else if (((int) fConfigParamsVersion) != ((int) CONFIG_PARAM_VERSION))
+    else if (((int)fConfigParamsVersion) != ((int)CONFIG_PARAM_VERSION))
     {
-        DebugMessage(M64MSG_WARNING, "Incompatible version %.2f in 'Core' config section: current is %.2f. Setting defaults.", fConfigParamsVersion, (float) CONFIG_PARAM_VERSION);
+        DebugMessage(M64MSG_WARNING, "Incompatible version %.2f in 'Core' config section: current is %.2f. Setting defaults.", fConfigParamsVersion, (float)CONFIG_PARAM_VERSION);
         ConfigDeleteSection("Core");
         ConfigOpenSection("Core", &g_CoreConfig);
         bSaveConfig = 1;
     }
     else if ((CONFIG_PARAM_VERSION - fConfigParamsVersion) >= 0.0001f)
     {
-        float fVersion = (float) CONFIG_PARAM_VERSION;
+        float fVersion = (float)CONFIG_PARAM_VERSION;
         ConfigSetParameter(g_CoreConfig, "Version", M64TYPE_FLOAT, &fVersion);
         DebugMessage(M64MSG_INFO, "Updating parameter set version in 'Core' config section to %.2f", fVersion);
         bUpgrade = 1;
@@ -238,7 +240,7 @@ int main_set_core_defaults(void)
     }
 
     /* parameters controlling the operation of the core */
-    ConfigSetDefaultFloat(g_CoreConfig, "Version", (float) CONFIG_PARAM_VERSION,  "Mupen64Plus Core config parameter set version number.  Please don't change this version number.");
+    ConfigSetDefaultFloat(g_CoreConfig, "Version", (float)CONFIG_PARAM_VERSION, "Mupen64Plus Core config parameter set version number.  Please don't change this version number.");
     ConfigSetDefaultBool(g_CoreConfig, "OnScreenDisplay", 1, "Draw on-screen display if True, otherwise don't draw OSD");
 #if defined(DYNAREC)
     ConfigSetDefaultInt(g_CoreConfig, "R4300Emulator", 2, "Use Pure Interpreter if 0, Cached Interpreter if 1, or Dynamic Recompiler if 2 or more");
@@ -361,7 +363,7 @@ void main_toggle_pause(void)
     if (rompause)
     {
         DebugMessage(M64MSG_STATUS, "Emulation continued.");
-        if(l_msgPause)
+        if (l_msgPause)
         {
             osd_delete_message(l_msgPause);
             l_msgPause = NULL;
@@ -370,7 +372,7 @@ void main_toggle_pause(void)
     }
     else
     {
-        if(l_msgPause)
+        if (l_msgPause)
             osd_delete_message(l_msgPause);
 
         DebugMessage(M64MSG_STATUS, "Emulation paused.");
@@ -465,58 +467,58 @@ m64p_error main_core_state_query(m64p_core_param param, int *rval)
 {
     switch (param)
     {
-        case M64CORE_EMU_STATE:
-            if (!g_EmulatorRunning)
-                *rval = M64EMU_STOPPED;
-            else if (rompause)
-                *rval = M64EMU_PAUSED;
-            else
-                *rval = M64EMU_RUNNING;
-            break;
-        case M64CORE_VIDEO_MODE:
-            if (!VidExt_VideoRunning())
-                *rval = M64VIDEO_NONE;
-            else if (VidExt_InFullscreenMode())
-                *rval = M64VIDEO_FULLSCREEN;
-            else
-                *rval = M64VIDEO_WINDOWED;
-            break;
-        case M64CORE_SAVESTATE_SLOT:
-            *rval = savestates_get_slot();
-            break;
-        case M64CORE_SPEED_FACTOR:
-            *rval = l_SpeedFactor;
-            break;
-        case M64CORE_SPEED_LIMITER:
-            *rval = l_MainSpeedLimit;
-            break;
-        case M64CORE_VIDEO_SIZE:
-        {
-            int width, height;
-            if (!g_EmulatorRunning)
-                return M64ERR_INVALID_STATE;
-            main_get_screen_size(&width, &height);
-            *rval = (width << 16) + height;
-            break;
-        }
-        case M64CORE_AUDIO_VOLUME:
-        {
-            if (!g_EmulatorRunning)
-                return M64ERR_INVALID_STATE;    
-            return main_volume_get_level(rval);
-        }
-        case M64CORE_AUDIO_MUTE:
-            *rval = main_volume_get_muted();
-            break;
-        case M64CORE_INPUT_GAMESHARK:
-            *rval = event_gameshark_active();
-            break;
+    case M64CORE_EMU_STATE:
+        if (!g_EmulatorRunning)
+            *rval = M64EMU_STOPPED;
+        else if (rompause)
+            *rval = M64EMU_PAUSED;
+        else
+            *rval = M64EMU_RUNNING;
+        break;
+    case M64CORE_VIDEO_MODE:
+        if (!VidExt_VideoRunning())
+            *rval = M64VIDEO_NONE;
+        else if (VidExt_InFullscreenMode())
+            *rval = M64VIDEO_FULLSCREEN;
+        else
+            *rval = M64VIDEO_WINDOWED;
+        break;
+    case M64CORE_SAVESTATE_SLOT:
+        *rval = savestates_get_slot();
+        break;
+    case M64CORE_SPEED_FACTOR:
+        *rval = l_SpeedFactor;
+        break;
+    case M64CORE_SPEED_LIMITER:
+        *rval = l_MainSpeedLimit;
+        break;
+    case M64CORE_VIDEO_SIZE:
+    {
+        int width, height;
+        if (!g_EmulatorRunning)
+            return M64ERR_INVALID_STATE;
+        main_get_screen_size(&width, &height);
+        *rval = (width << 16) + height;
+        break;
+    }
+    case M64CORE_AUDIO_VOLUME:
+    {
+        if (!g_EmulatorRunning)
+            return M64ERR_INVALID_STATE;
+        return main_volume_get_level(rval);
+    }
+    case M64CORE_AUDIO_MUTE:
+        *rval = main_volume_get_muted();
+        break;
+    case M64CORE_INPUT_GAMESHARK:
+        *rval = event_gameshark_active();
+        break;
         // these are only used for callbacks; they cannot be queried or set
-        case M64CORE_STATE_LOADCOMPLETE:
-        case M64CORE_STATE_SAVECOMPLETE:
-            return M64ERR_INPUT_INVALID;
-        default:
-            return M64ERR_INPUT_INVALID;
+    case M64CORE_STATE_LOADCOMPLETE:
+    case M64CORE_STATE_SAVECOMPLETE:
+        return M64ERR_INPUT_INVALID;
+    default:
+        return M64ERR_INPUT_INVALID;
     }
 
     return M64ERR_SUCCESS;
@@ -526,92 +528,92 @@ m64p_error main_core_state_set(m64p_core_param param, int val)
 {
     switch (param)
     {
-        case M64CORE_EMU_STATE:
-            if (!g_EmulatorRunning)
-                return M64ERR_INVALID_STATE;
-            if (val == M64EMU_STOPPED)
-            {        
-                /* this stop function is asynchronous.  The emulator may not terminate until later */
-                main_stop();
-                return M64ERR_SUCCESS;
-            }
-            else if (val == M64EMU_RUNNING)
-            {
-                if (main_is_paused())
-                    main_toggle_pause();
-                return M64ERR_SUCCESS;
-            }
-            else if (val == M64EMU_PAUSED)
-            {    
-                if (!main_is_paused())
-                    main_toggle_pause();
-                return M64ERR_SUCCESS;
-            }
-            return M64ERR_INPUT_INVALID;
-        case M64CORE_VIDEO_MODE:
-            if (!g_EmulatorRunning)
-                return M64ERR_INVALID_STATE;
-            if (val == M64VIDEO_WINDOWED)
-            {
-                if (VidExt_InFullscreenMode())
-                    gfx.changeWindow();
-                return M64ERR_SUCCESS;
-            }
-            else if (val == M64VIDEO_FULLSCREEN)
-            {
-                if (!VidExt_InFullscreenMode())
-                    gfx.changeWindow();
-                return M64ERR_SUCCESS;
-            }
-            return M64ERR_INPUT_INVALID;
-        case M64CORE_SAVESTATE_SLOT:
-            if (val < 0 || val > 9)
-                return M64ERR_INPUT_INVALID;
-            savestates_select_slot(val);
-            return M64ERR_SUCCESS;
-        case M64CORE_SPEED_FACTOR:
-            if (!g_EmulatorRunning)
-                return M64ERR_INVALID_STATE;
-            main_speedset(val);
-            return M64ERR_SUCCESS;
-        case M64CORE_SPEED_LIMITER:
-            main_set_speedlimiter(val);
-            return M64ERR_SUCCESS;
-        case M64CORE_VIDEO_SIZE:
+    case M64CORE_EMU_STATE:
+        if (!g_EmulatorRunning)
+            return M64ERR_INVALID_STATE;
+        if (val == M64EMU_STOPPED)
         {
-            // the front-end app is telling us that the user has resized the video output frame, and so
-            // we should try to update the video plugin accordingly.  First, check state
-            int width, height;
-            if (!g_EmulatorRunning)
-                return M64ERR_INVALID_STATE;
-            width = (val >> 16) & 0xffff;
-            height = val & 0xffff;
-            // then call the video plugin.  if the video plugin supports resizing, it will resize its viewport and call
-            // VidExt_ResizeWindow to update the window manager handling our opengl output window
-            gfx.resizeVideoOutput(width, height);
+            /* this stop function is asynchronous.  The emulator may not terminate until later */
+            main_stop();
             return M64ERR_SUCCESS;
         }
-        case M64CORE_AUDIO_VOLUME:
-            if (!g_EmulatorRunning)
-                return M64ERR_INVALID_STATE;
-            if (val < 0 || val > 100)
-                return M64ERR_INPUT_INVALID;
-            return main_volume_set_level(val);
-        case M64CORE_AUDIO_MUTE:
-            if ((main_volume_get_muted() && !val) || (!main_volume_get_muted() && val))
-                return main_volume_mute();
+        else if (val == M64EMU_RUNNING)
+        {
+            if (main_is_paused())
+                main_toggle_pause();
             return M64ERR_SUCCESS;
-        case M64CORE_INPUT_GAMESHARK:
-            if (!g_EmulatorRunning)
-                return M64ERR_INVALID_STATE;
-            event_set_gameshark(val);
+        }
+        else if (val == M64EMU_PAUSED)
+        {
+            if (!main_is_paused())
+                main_toggle_pause();
             return M64ERR_SUCCESS;
+        }
+        return M64ERR_INPUT_INVALID;
+    case M64CORE_VIDEO_MODE:
+        if (!g_EmulatorRunning)
+            return M64ERR_INVALID_STATE;
+        if (val == M64VIDEO_WINDOWED)
+        {
+            if (VidExt_InFullscreenMode())
+                gfx.changeWindow();
+            return M64ERR_SUCCESS;
+        }
+        else if (val == M64VIDEO_FULLSCREEN)
+        {
+            if (!VidExt_InFullscreenMode())
+                gfx.changeWindow();
+            return M64ERR_SUCCESS;
+        }
+        return M64ERR_INPUT_INVALID;
+    case M64CORE_SAVESTATE_SLOT:
+        if (val < 0 || val > 9)
+            return M64ERR_INPUT_INVALID;
+        savestates_select_slot(val);
+        return M64ERR_SUCCESS;
+    case M64CORE_SPEED_FACTOR:
+        if (!g_EmulatorRunning)
+            return M64ERR_INVALID_STATE;
+        main_speedset(val);
+        return M64ERR_SUCCESS;
+    case M64CORE_SPEED_LIMITER:
+        main_set_speedlimiter(val);
+        return M64ERR_SUCCESS;
+    case M64CORE_VIDEO_SIZE:
+    {
+        // the front-end app is telling us that the user has resized the video output frame, and so
+        // we should try to update the video plugin accordingly.  First, check state
+        int width, height;
+        if (!g_EmulatorRunning)
+            return M64ERR_INVALID_STATE;
+        width = (val >> 16) & 0xffff;
+        height = val & 0xffff;
+        // then call the video plugin.  if the video plugin supports resizing, it will resize its viewport and call
+        // VidExt_ResizeWindow to update the window manager handling our opengl output window
+        gfx.resizeVideoOutput(width, height);
+        return M64ERR_SUCCESS;
+    }
+    case M64CORE_AUDIO_VOLUME:
+        if (!g_EmulatorRunning)
+            return M64ERR_INVALID_STATE;
+        if (val < 0 || val > 100)
+            return M64ERR_INPUT_INVALID;
+        return main_volume_set_level(val);
+    case M64CORE_AUDIO_MUTE:
+        if ((main_volume_get_muted() && !val) || (!main_volume_get_muted() && val))
+            return main_volume_mute();
+        return M64ERR_SUCCESS;
+    case M64CORE_INPUT_GAMESHARK:
+        if (!g_EmulatorRunning)
+            return M64ERR_INVALID_STATE;
+        event_set_gameshark(val);
+        return M64ERR_SUCCESS;
         // these are only used for callbacks; they cannot be queried or set
-        case M64CORE_STATE_LOADCOMPLETE:
-        case M64CORE_STATE_SAVECOMPLETE:
-            return M64ERR_INPUT_INVALID;
-        default:
-            return M64ERR_INPUT_INVALID;
+    case M64CORE_STATE_LOADCOMPLETE:
+    case M64CORE_STATE_SAVECOMPLETE:
+        return M64ERR_INPUT_INVALID;
+    default:
+        return M64ERR_INPUT_INVALID;
     }
 }
 
@@ -712,7 +714,7 @@ static void video_plugin_render_callback(int bScreenRedrawn)
     }
 
     // if the input plugin specified a render callback, call it now
-    if(input.renderCallback)
+    if (input.renderCallback)
     {
         input.renderCallback();
     }
@@ -752,7 +754,7 @@ static void apply_speed_limiter(void)
 #endif
 
     // if this is the first frame, initialize our data structures
-    if(LastFPSTime == 0)
+    if (LastFPSTime == 0)
     {
         LastFPSTime = SDL_GetTicks();
         VITotalDelta = 0;
@@ -763,13 +765,13 @@ static void apply_speed_limiter(void)
 
     // calculate # of milliseconds that have passed since the last video interrupt
     CurrentFPSTime = SDL_GetTicks();
-    ThisFrameDelta = CurrentFPSTime - LastFPSTime - (int) AdjustedLimit;
+    ThisFrameDelta = CurrentFPSTime - LastFPSTime - (int)AdjustedLimit;
 
     // are we too fast?
     if (ThisFrameDelta < 0)
     {
         // calculate the total time error over the last 64 frames
-        IntegratedDelta = VITotalDelta  + ThisFrameDelta;
+        IntegratedDelta = VITotalDelta + ThisFrameDelta;
         // if we are still too fast, and then speed limiter is on, then we should wait
         if (IntegratedDelta < 0 && l_MainSpeedLimit)
         {
@@ -779,12 +781,12 @@ static void apply_speed_limiter(void)
             // recalculate # of milliseconds that have passed since the last video interrupt,
             // taking into account the time we just waited
             CurrentFPSTime = SDL_GetTicks();
-            ThisFrameDelta = CurrentFPSTime - LastFPSTime - (int) AdjustedLimit;
+            ThisFrameDelta = CurrentFPSTime - LastFPSTime - (int)AdjustedLimit;
         }
     }
 
     // update our data structures
-    LastFPSTime = CurrentFPSTime ;
+    LastFPSTime = CurrentFPSTime;
     VITotalDelta += ThisFrameDelta - VIDeltas[VIDeltasIndex];
     VIDeltas[VIDeltasIndex] = ThisFrameDelta;
     VIDeltasIndex = (VIDeltasIndex + 1) & 63;
@@ -795,7 +797,7 @@ static void apply_speed_limiter(void)
 /* TODO: make a GameShark module and move that there */
 static void gs_apply_cheats(void)
 {
-    if(g_gs_vi_counter < 60)
+    if (g_gs_vi_counter < 60)
     {
         if (g_gs_vi_counter == 0)
             cheat_apply_cheats(ENTRY_BOOT);
@@ -809,11 +811,11 @@ static void gs_apply_cheats(void)
 
 static void pause_loop(void)
 {
-    if(rompause)
+    if (rompause)
     {
         osd_render();  // draw Paused message in case gfx.updateScreen didn't do it
         VidExt_GL_SwapBuffers();
-        while(rompause)
+        while (rompause)
         {
             SDL_Delay(10);
             main_check_inputs();
@@ -837,18 +839,18 @@ void new_vi(void)
 }
 
 static void connect_all(
-        struct r4300_core* r4300,
-        struct rdp_core* dp,
-        struct rsp_core* sp,
-        struct ai_controller* ai,
-        struct pi_controller* pi,
-        struct ri_controller* ri,
-        struct si_controller* si,
-        struct vi_controller* vi,
-        uint32_t* dram,
-        size_t dram_size,
-        uint8_t* rom,
-        size_t rom_size)
+struct r4300_core* r4300,
+struct rdp_core* dp,
+struct rsp_core* sp,
+struct ai_controller* ai,
+struct pi_controller* pi,
+struct ri_controller* ri,
+struct si_controller* si,
+struct vi_controller* vi,
+    uint32_t* dram,
+    size_t dram_size,
+    uint8_t* rom,
+    size_t rom_size)
 {
     connect_rdp(dp, r4300, sp, ri);
     connect_rsp(sp, r4300, dp, ri);
@@ -865,8 +867,8 @@ static void connect_all(
 m64p_error main_run(void)
 {
     size_t i;
-	int network_mode = 0;
-	int network_status = 1;
+    int network_mode = 0;
+    int network_status = 1;
     unsigned int disable_extra_mem;
     struct eep_file eep;
     struct fla_file fla;
@@ -891,14 +893,14 @@ m64p_error main_run(void)
     /* do byte-swapping if it's not been done yet */
     if (g_MemHasBeenBSwapped == 0)
     {
-        swap_buffer(g_rom, 4, g_rom_size/4);
+        swap_buffer(g_rom, 4, g_rom_size / 4);
         g_MemHasBeenBSwapped = 1;
     }
 
     connect_all(&g_r4300, &g_dp, &g_sp,
-                &g_ai, &g_pi, &g_ri, &g_si, &g_vi,
-                g_rdram, (disable_extra_mem == 0) ? 0x800000 : 0x400000,
-                g_rom, g_rom_size);
+        &g_ai, &g_pi, &g_ri, &g_si, &g_vi,
+        g_rdram, (disable_extra_mem == 0) ? 0x800000 : 0x400000,
+        g_rom, g_rom_size);
 
     init_memory();
 
@@ -940,16 +942,27 @@ m64p_error main_run(void)
     g_si.pif.af_rtc.user_data = NULL;
     g_si.pif.af_rtc.get_time = get_time_using_C_localtime;
 
+    /* Get if we will use the network */
+    network_mode = ConfigGetParamInt(g_CoreConfig, "NetworkMode");
+
     /* connect external game controllers */
-    for(i = 0; i < GAME_CONTROLLERS_COUNT; ++i)
+    for (i = 0; i < GAME_CONTROLLERS_COUNT; ++i)
     {
         g_si.pif.controllers[i].user_data = &channels[i];
-        g_si.pif.controllers[i].is_connected = egcvip_is_connected;
-        g_si.pif.controllers[i].get_input = egcvip_get_input;
+        if (network_mode == NO_NETWORK)
+        {
+            g_si.pif.controllers[i].is_connected = egcvip_is_connected;
+            g_si.pif.controllers[i].get_input = egcvip_get_input;
+        }
+        else
+        {
+            g_si.pif.controllers[i].is_connected = egcn_is_connected;
+            g_si.pif.controllers[i].get_input = egcn_get_input;
+        }
     }
 
     /* connect external rumblepaks */
-    for(i = 0; i < GAME_CONTROLLERS_COUNT; ++i)
+    for (i = 0; i < GAME_CONTROLLERS_COUNT; ++i)
     {
         g_si.pif.controllers[i].rumblepak.user_data = &channels[i];
         g_si.pif.controllers[i].rumblepak.rumble = rvip_rumble;
@@ -957,7 +970,7 @@ m64p_error main_run(void)
 
     /* open mpk file (if any) and connect it to mempaks */
     open_mpk_file(&mpk, get_mempaks_path());
-    for(i = 0; i < GAME_CONTROLLERS_COUNT; ++i)
+    for (i = 0; i < GAME_CONTROLLERS_COUNT; ++i)
     {
         g_si.pif.controllers[i].mempak.user_data = &mpk;
         g_si.pif.controllers[i].mempak.save = save_mpk_file;
@@ -1003,47 +1016,41 @@ m64p_error main_run(void)
         init_debugger();
 #endif
 
-	/* setup network if necessary */
-	/*
-	bool isClient = ConfigGetParamBool(g_CoreConfig, "IsClient");
-	bool isServer = ConfigGetParamBool(g_CoreConfig, "IsServer");
-	*/
-	network_mode = ConfigGetParamInt(g_CoreConfig, "NetworkMode");
-	if (network_mode > NO_NETWORK)
-	{
-		int port = ConfigGetParamInt(g_CoreConfig, "ServerPort");
-		if (network_mode == IS_SERVER)
-		{			
-			network_status = launch_server(port);
-		}
-		if (network_mode == IS_CLIENT)
-		{
-			const char* ip = ConfigGetParamString(g_CoreConfig, "ServerIp");
-			network_status = launch_client(ip, port);
-		}
-	}
+    if (network_mode > NO_NETWORK)
+    {
+        int port = ConfigGetParamInt(g_CoreConfig, "ServerPort");
+        if (network_mode == IS_SERVER)
+        {
+            network_status = launch_server(port);
+        }
+        if (network_mode == IS_CLIENT)
+        {
+            const char* ip = ConfigGetParamString(g_CoreConfig, "ServerIp");
+            network_status = launch_client(ip, port);
+        }
+    }
 
 
-	if (network_status > 0)
-	{
-		/* Startup message on the OSD */
-		osd_new_message(OSD_MIDDLE_CENTER, "Mupen64Plus Started...");
+    if (network_status > 0)
+    {
+        /* Startup message on the OSD */
+        osd_new_message(OSD_MIDDLE_CENTER, "Mupen64Plus Started...");
 
-		g_EmulatorRunning = 1;
-		StateChanged(M64CORE_EMU_STATE, M64EMU_RUNNING);
+        g_EmulatorRunning = 1;
+        StateChanged(M64CORE_EMU_STATE, M64EMU_RUNNING);
 
-		/* call r4300 CPU core and run the game */
-		r4300_reset_hard();
-		r4300_reset_soft();
-		r4300_execute();
-	}
+        /* call r4300 CPU core and run the game */
+        r4300_reset_hard();
+        r4300_reset_soft();
+        r4300_execute();
+    }
 
 
-	/* cleanup network */
-	if (network_mode > 0)
-	{
-		cleanup_network();
-	}
+    /* cleanup network */
+    if (network_mode > 0)
+    {
+        cleanup_network();
+    }
 
     /* now begin to shut down */
 #ifdef WITH_LIRC
@@ -1085,17 +1092,17 @@ void main_stop(void)
         return;
 
     DebugMessage(M64MSG_STATUS, "Stopping emulation.");
-    if(l_msgPause)
+    if (l_msgPause)
     {
         osd_delete_message(l_msgPause);
         l_msgPause = NULL;
     }
-    if(l_msgFF)
+    if (l_msgFF)
     {
         osd_delete_message(l_msgFF);
         l_msgFF = NULL;
     }
-    if(l_msgVol)
+    if (l_msgVol)
     {
         osd_delete_message(l_msgVol);
         l_msgVol = NULL;
@@ -1116,5 +1123,5 @@ void main_stop(void)
 
 int main_get_current_frame(void)
 {
-	return l_CurrentFrame;
+    return l_CurrentFrame;
 }

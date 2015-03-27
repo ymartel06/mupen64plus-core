@@ -282,8 +282,9 @@
     <ClCompile Include="..\..\src\si\rumblepak.c" />
     <ClCompile Include="..\..\src\si\si_controller.c" />
     <ClCompile Include="..\..\src\vi\vi_controller.c" />
-    <ClCompile Include="..\..\src\network\network.c" />
     <ClCompile Include="..\..\src\network\bitstream.c" />
+    <ClCompile Include="..\..\src\network\network.c" />
+    <ClCompile Include="..\..\src\network\emulate_game_controller_network.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\ai\ai_controller.h" />
@@ -445,8 +446,9 @@
     <ClInclude Include="..\..\src\si\rumblepak.h" />
     <ClInclude Include="..\..\src\si\si_controller.h" />
     <ClInclude Include="..\..\src\vi\vi_controller.h" />
-    <ClInclude Include="..\..\src\network\network.h" />
     <ClInclude Include="..\..\src\network\bitstream.h" />
+    <ClInclude Include="..\..\src\network\network.h" />
+    <ClInclude Include="..\..\src\network\emulate_game_controller_network.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\r4300\interpreter.def" />

@@ -45,7 +45,7 @@ extern m64p_handle g_CoreConfig;
 extern int g_MemHasBeenBSwapped;
 extern int g_EmulatorRunning;
 
-extern ALIGN(16, uint32_t g_rdram[RDRAM_MAX_SIZE/4]);
+extern ALIGN(16, uint32_t g_rdram[RDRAM_MAX_SIZE / 4]);
 
 extern struct ai_controller g_ai;
 extern struct pi_controller g_pi;

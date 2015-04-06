@@ -67,6 +67,7 @@
 #include "api/m64p_config.h"
 #include "plugin/plugin.h"
 #include "r4300/reset.h"
+#include "network/network.h"
 
 /* version number for CoreEvents config section */
 #define CONFIG_PARAM_VERSION 1.00
@@ -305,33 +306,40 @@ static int SDLCALL event_sdl_filter(void *userdata, SDL_Event *event)
                         gfx.changeWindow();
                     else if (cmd == joyStop)
                         main_stop();
-                    else if (cmd == joyPause)
-                        main_toggle_pause();
-                    else if (cmd == joySave)
-                        main_state_save(1, NULL); /* save in mupen64plus format using current slot */
-                    else if (cmd == joyLoad)
-                        main_state_load(NULL); /* load using current slot */
-                    else if (cmd == joyIncrement)
-                        main_state_inc_slot();
-                    else if (cmd == joyScreenshot)
-                        main_take_next_screenshot();
                     else if (cmd == joyMute)
                         main_volume_mute();
                     else if (cmd == joyDecrease)
                         main_volume_down();
                     else if (cmd == joyIncrease)
                         main_volume_up();
-                    else if (cmd == joyForward)
-                        main_set_fastforward(1);
-                    else if (cmd == joyGameshark)
-                        event_set_gameshark(1);
+                    else if (current_network_mode == NO_NETWORK)
+                    {
+                        if (cmd == joyPause)
+                            main_toggle_pause();
+                        else if (cmd == joySave)
+                            main_state_save(1, NULL); /* save in mupen64plus format using current slot */
+                        else if (cmd == joyLoad)
+                            main_state_load(NULL); /* load using current slot */
+                        else if (cmd == joyIncrement)
+                            main_state_inc_slot();
+                        else if (cmd == joyScreenshot)
+                            main_take_next_screenshot();
+                        else if (cmd == joyForward)
+                            main_set_fastforward(1);
+                        else if (cmd == joyGameshark)
+                            event_set_gameshark(1);
+                    }
+
                 }
                 else if (action == -1) /* command was just de-activated (button up, etc) */
                 {
-                    if (cmd == joyForward)
-                        main_set_fastforward(0);
-                    else if (cmd == joyGameshark)
-                        event_set_gameshark(0);
+                    if (current_network_mode == NO_NETWORK)
+                    {
+                        if (cmd == joyForward)
+                            main_set_fastforward(0);
+                        else if (cmd == joyGameshark)
+                            event_set_gameshark(0);
+                    }
                 }
             }
 

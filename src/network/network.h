@@ -66,9 +66,11 @@ void sync_game_start();
 int one_way_ping(uint32_t end_time, uint32_t begin_time);
 void sleepcp(int milliseconds);
 
+//frame sync
+void frame_sync_read_socket();
+
 //inputs
 void set_local_input(uint32_t input);
 uint32_t get_local_input();
-uint32_t get_remote_input();
 void send_remote_input(uint32_t input);
 #endif /* guard */

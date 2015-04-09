@@ -24,8 +24,8 @@ BIT_STREAM *receive_stream;
 uint16_t time_delay;
 uint8_t frame_delay;
 uint32_t start;
-uint32_t player_inputs[4][INPUTS_FRAME];
-uint32_t local_inputs[INPUTS_FRAME];
+int first_local_player_index = 0;
+int last_local_player_index = 0;
 
 int frame_sync = 0;
 uint32_t remote_current_frame = 0; // store the frame number for the last remote input received
@@ -34,7 +34,6 @@ uint32_t remote_current_frame = 0; // store the frame number for the last remote
 int client_is_ready = -1;
 uint32_t clock_diff;
 uint16_t remote_clock_per_second;
-uint32_t remote_inputs[INPUTS_FRAME];
 
 //for the client
 int server_game_start = 0;
@@ -44,7 +43,6 @@ void init_network()
 {
     send_stream = BitStream_new();
     receive_stream = BitStream_new();
-    remote_input = 0;
     simulated_tick_time = 1000 / ROM_PARAMS.vilimit;
 
 #ifdef WIN32
@@ -77,11 +75,66 @@ void cleanup_network()
     }
 }
 
-int launch_server(int port)
+void init_local_player(int local_player_nb)
+{
+    if (local_player_nb < 1)
+    {
+        local_player_nb = 1;
+
+    }
+    else if (local_player_nb > 3)
+    {
+        local_player_nb = 3;
+    }
+
+    local_player_number = local_player_nb;
+}
+
+void init_player_inputs()
+{
+    int total_players = local_player_number + remote_player_number;
+    DebugMessage(M64MSG_INFO, "Network: Players count is %d", total_players);
+    
+    if (current_network_mode == IS_SERVER)
+    {
+        first_local_player_index = 0;
+        last_local_player_index = local_player_number - 1;
+        for (int i = 0; i < local_player_number; i++)
+        {
+            network_players[i].player_input_mode = IS_LOCAL;
+            network_players[i].player_local_channel = i;
+            DebugMessage(M64MSG_INFO, "Network: Player %d is local", i);
+        }
+        for (int i = local_player_number; i < total_players; i++)
+        {
+            network_players[i].player_input_mode = IS_REMOTE;
+            DebugMessage(M64MSG_INFO, "Network: Player %d is remote", i);
+        }
+    }
+    else if (current_network_mode == IS_CLIENT)
+    {
+        first_local_player_index = remote_player_number;
+        last_local_player_index = total_players - 1;
+        for (int i = 0; i < remote_player_number; i++)
+        {
+            network_players[i].player_input_mode = IS_REMOTE;
+            DebugMessage(M64MSG_INFO, "Network: Player %d is remote", i);
+        }
+        for (int i = remote_player_number; i < total_players; i++)
+        {
+            network_players[i].player_input_mode = IS_LOCAL;
+            network_players[i].player_local_channel = i - remote_player_number;
+            DebugMessage(M64MSG_INFO, "Network: Player %d is local", i);
+        }
+    }
+}
+
+int launch_server(int port, int local_player_nb)
 {
     int success = 0;
     init_network();
     current_network_mode = IS_SERVER;
+    init_local_player(local_player_nb);
 
     int server_port = get_server_port(port);
 
@@ -150,11 +203,11 @@ int get_server_port(int port)
     }
 }
 
-int launch_client(const char *address, int port)
+int launch_client(const char *address, int port, int local_player_nb)
 {
     init_network();
     current_network_mode = IS_CLIENT;
-
+    init_local_player(local_player_nb);
     int server_port = get_server_port(port);
 
     next_incoming_message = WELCOME;
@@ -314,19 +367,33 @@ char *get_ip_str(const struct sockaddr *sa, char *s, size_t maxlen)
     return s;
 }
 
-void send_remote_input(uint32_t input)
+void send_remote_input(uint32_t input, uint16_t channel)
 {
-    BitStream_reset(send_stream);
-    BitStream_write_uint16(send_stream, NET_INPUT);
-    BitStream_write_uint32(send_stream, main_get_current_frame());
+    //write the header of the packet only at the first local player
+    if (first_local_player_index == channel)
+    {
+        BitStream_reset(send_stream);
+        BitStream_write_uint16(send_stream, NET_INPUT);
+        BitStream_write_uint32(send_stream, main_get_current_frame());
+    }
+
+    //content
+    BitStream_write_uint16(send_stream, channel);
     BitStream_write_uint32(send_stream, input);
-    write_socket(client_socket, send_stream);
+
+    //send the packet only when the last local player has put his input
+    if (last_local_player_index == channel)
+        write_socket(client_socket, send_stream);
 }
 
 void read_network_input(BIT_STREAM *bstream)
 {
     remote_current_frame = BitStream_read_uint32(bstream);
-    remote_input = BitStream_read_uint32(bstream);
+    for (int i = 0; i < remote_player_number; i++)
+    {
+        uint16_t channel = BitStream_read_uint16(bstream);
+        set_remote_input(BitStream_read_uint32(bstream), channel);
+    }
 }
 
 int send_welcome(SOCKET sock)
@@ -337,12 +404,15 @@ int send_welcome(SOCKET sock)
     // we will use it to estimate the ping but also to have difference between the client clock and the server clock
     BitStream_write_uint16(send_stream, WELCOME);
     BitStream_write_uint32(send_stream, clock());
+    // add the number of player in local
+    BitStream_write_uint16(send_stream, local_player_number);
     return write_socket(sock, send_stream);
 }
 
 void read_welcome(BIT_STREAM *bstream, SOCKET sock)
 {
     uint32_t remote_clock = BitStream_read_uint32(bstream);
+    remote_player_number = BitStream_read_uint16(bstream);
     send_welcome_back(sock, remote_clock);
 }
 
@@ -351,6 +421,7 @@ int send_welcome_back(SOCKET sock, uint32_t remote_clock)
     next_incoming_message = GAME_START;
     BitStream_reset(send_stream);
     BitStream_write_uint16(send_stream, WELCOME_BACK);
+    BitStream_write_uint16(send_stream, local_player_number);	//number of player in local
     BitStream_write_uint32(send_stream, remote_clock);	//remote clock for the ping
     BitStream_write_uint32(send_stream, clock());		//current clock to estimate the difference between clocks
     BitStream_write_uint16(send_stream, CLOCKS_PER_SEC);		//send the clocks per sec to 
@@ -362,6 +433,7 @@ int send_welcome_back(SOCKET sock, uint32_t remote_clock)
 void read_welcome_back(BIT_STREAM *bstream, SOCKET sock)
 {
     next_incoming_message = NET_INPUT;
+    remote_player_number = BitStream_read_uint16(bstream);
     uint32_t local_clock = BitStream_read_uint32(bstream);
     uint32_t remote_clock = BitStream_read_uint32(bstream);
     remote_clock_per_second = BitStream_read_uint16(bstream);
@@ -379,19 +451,29 @@ void read_welcome_back(BIT_STREAM *bstream, SOCKET sock)
 
     if (remote_core_version != MUPEN_CORE_VERSION)
     {
-        DebugMessage(M64MSG_VERBOSE, "Network: Remote Core version is not the same (%d)", remote_core_version);
         send_disconnection(sock, WRONG_CORE_VERSION);
-        client_is_ready = 0;
         return;
     }
 
     if (memcmp(remote_rom_md5, ROM_SETTINGS.MD5, 32) != 0)
     {
-        DebugMessage(M64MSG_VERBOSE, "Network: ROM MD5 check failed");
         send_disconnection(sock, WRONG_ROM);
-        client_is_ready = 0;
         return;
     }
+
+    if (remote_player_number < 1 || remote_player_number >= 4)
+    {
+        send_disconnection(sock, WRONG_LOCAL_PLAYER);
+        return;
+    }
+
+    if (local_player_number + remote_player_number > 4)
+    {
+        send_disconnection(sock, TOO_MUCH_PLAYER);
+        return;
+    }
+
+    init_player_inputs();
 
     free(remote_rom_md5);
 
@@ -400,6 +482,24 @@ void read_welcome_back(BIT_STREAM *bstream, SOCKET sock)
 
 int send_disconnection(SOCKET sock, disconnection_reason reason)
 {
+    client_is_ready = 0;
+
+    switch (reason)
+    {
+    case WRONG_CORE_VERSION:
+        DebugMessage(M64MSG_VERBOSE, "Network: Remote Core version is not the same");
+        break;
+    case WRONG_ROM:
+        DebugMessage(M64MSG_VERBOSE, "Network: ROM MD5 check failed");
+        break;
+    case WRONG_LOCAL_PLAYER:
+        DebugMessage(M64MSG_VERBOSE, "Network: Issue with the remote player number");
+        break;
+    case TOO_MUCH_PLAYER:
+        DebugMessage(M64MSG_VERBOSE, "Network: Server can't handle more than 4 players");
+        break;
+    }
+
     BitStream_reset(send_stream);
     BitStream_write_uint16(send_stream, DISCONNECT);
     BitStream_write_uint16(send_stream, reason);
@@ -416,6 +516,12 @@ void read_disconnection(BIT_STREAM *bstream)
         break;
     case WRONG_ROM:
         DebugMessage(M64MSG_ERROR, "Network: You must have the same rom as the server.");
+        break;
+    case WRONG_LOCAL_PLAYER:
+        DebugMessage(M64MSG_ERROR, "Network: You must have at least one local player, up to 3");
+        break;
+    case TOO_MUCH_PLAYER:
+        DebugMessage(M64MSG_ERROR, "Network: Server can't handle more than 4 players. Try to have less local player");
         break;
     }
     exit(1);
@@ -437,6 +543,8 @@ int send_game_start(SOCKET sock)
 
 void read_network_game_start(BIT_STREAM *bstream)
 {
+    init_player_inputs();
+
     start = BitStream_read_uint32(bstream);
     time_delay = BitStream_read_uint16(bstream);
     frame_delay = time_delay / simulated_tick_time;
@@ -533,13 +641,26 @@ void sleepcp(int milliseconds) // cross-platform sleep function
 #endif
 }
 
-void set_local_input(uint32_t input)
+void set_local_input(uint32_t input, uint16_t channel)
 {
     int index = ((main_get_current_frame() + frame_delay)  % INPUTS_FRAME);
-    local_inputs[index] = input;
+    network_players[channel].player_input[index] = input;
 }
 
-uint32_t get_local_input()
+uint32_t get_local_input(uint16_t channel)
 {
-    return local_inputs[(main_get_current_frame() % INPUTS_FRAME)];
+    return network_players[channel].player_input[(main_get_current_frame() % INPUTS_FRAME)];
+}
+
+void set_remote_input(uint32_t input, uint16_t channel)
+{
+    int index = (remote_current_frame % INPUTS_FRAME);
+    network_players[channel].player_input[index] = input;
+}
+
+uint32_t get_remote_input(uint16_t channel)
+{
+    uint32_t input = network_players[channel].player_input[(remote_current_frame % INPUTS_FRAME)];
+    network_players[channel].player_input[(remote_current_frame % INPUTS_FRAME)] = 0;
+    return input;
 }

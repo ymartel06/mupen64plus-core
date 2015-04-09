@@ -1018,15 +1018,16 @@ m64p_error main_run(void)
 
     if (network_mode > NO_NETWORK)
     {
+        int local_player = ConfigGetParamInt(g_CoreConfig, "LocalPlayer");
         int port = ConfigGetParamInt(g_CoreConfig, "ServerPort");
         if (network_mode == IS_SERVER)
         {
-            network_status = launch_server(port);
+            network_status = launch_server(port, local_player);
         }
         if (network_mode == IS_CLIENT)
         {
             const char* ip = ConfigGetParamString(g_CoreConfig, "ServerIp");
-            network_status = launch_client(ip, port);
+            network_status = launch_client(ip, port, local_player);
         }
     }
 

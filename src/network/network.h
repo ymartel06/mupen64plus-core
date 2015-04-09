@@ -30,26 +30,35 @@ typedef struct in_addr IN_ADDR;
 #include "api/m64p_types.h"
 #include "bitstream.h"
 
-#define CRLF            "\r\n"
 #define PORT            6464
 #define MAX_CLIENTS     1
 #define INPUTS_FRAME    60
 
-network_mode current_network_mode;
-uint32_t remote_input;
+typedef struct {
+    uint32_t player_input[INPUTS_FRAME];
+    network_player_input_mode player_input_mode;
+    uint16_t player_local_channel;
+} network_player;
 
+network_player network_players[4];
+int local_player_number;
+int remote_player_number;
+
+network_mode current_network_mode;
+
+//init methods
 void init_network();
-void cleanup_network();
-int launch_client(const char *address, int port);
-int launch_server(int port);
-int get_server_port(int port);
+void init_local_player(int local_player_nb);
 int init_connection_client(const char *address, int port);
 int init_connection_server(int port);
+void cleanup_network();
+int launch_client(const char *address, int port, int local_player_nb);
+int launch_server(int port, int local_player_nb);
+int get_server_port(int port);
 void end_connection(int sock);
 int read_socket(SOCKET sock, BIT_STREAM *bstream);
 int write_socket(SOCKET sock, BIT_STREAM *bstream);
 int set_blocking(int fd, int blocking);
-char *get_ip_str(const struct sockaddr *sa, char *s, size_t maxlen);
 int send_game_start(SOCKET sock);
 int send_welcome(SOCKET sock);
 int send_welcome_back(SOCKET sock, uint32_t remote_clock);
@@ -63,14 +72,19 @@ void read_disconnection(BIT_STREAM *bstream);
 void reset_remote_input();
 void read_client_socket();
 void sync_game_start();
-int one_way_ping(uint32_t end_time, uint32_t begin_time);
+
+//helpers
 void sleepcp(int milliseconds);
+char *get_ip_str(const struct sockaddr *sa, char *s, size_t maxlen);
+int one_way_ping(uint32_t end_time, uint32_t begin_time);
 
 //frame sync
 void frame_sync_read_socket();
 
 //inputs
-void set_local_input(uint32_t input);
-uint32_t get_local_input();
-void send_remote_input(uint32_t input);
+void set_local_input(uint32_t input, uint16_t channel);
+uint32_t get_local_input(uint16_t channel);
+void set_remote_input(uint32_t input, uint16_t channel);
+uint32_t get_remote_input(uint16_t channel);
+void send_remote_input(uint32_t input, uint16_t channel);
 #endif /* guard */

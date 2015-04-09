@@ -375,6 +375,12 @@ typedef enum {
 } network_mode;
 
 typedef enum {
+    NOT_CONNECTED = 0,
+    IS_LOCAL,
+    IS_REMOTE,
+} network_player_input_mode;
+
+typedef enum {
     NOTHING = 0,
     DISCONNECT,
     NET_INPUT,
@@ -386,6 +392,8 @@ typedef enum {
 typedef enum {
     WRONG_CORE_VERSION = 0,
     WRONG_ROM,
+    WRONG_LOCAL_PLAYER,     //Client is trying to connect with less than 1 player or more than 3
+    TOO_MUCH_PLAYER,        //The server can't handle more than 4 players
 } disconnection_reason;
 
 #endif /* define M64P_TYPES_H */

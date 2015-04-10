@@ -29,7 +29,7 @@ uint32_t egcn_get_input(void* opaque)
     if (network_players[channel].player_input_mode == IS_LOCAL)
     {
         //check if the controller is really connected
-        CONTROL* c = &Controls[channel]; //not that channel to check
+        CONTROL* c = &Controls[network_players[channel].player_local_channel]; //not that channel to check
         if (c->Present && input.getKeys)
             input.getKeys(network_players[channel].player_local_channel, &keys);
 

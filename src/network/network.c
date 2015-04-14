@@ -92,6 +92,7 @@ void init_local_player(int local_player_nb)
 
 void init_player_inputs()
 {
+    int i;
     int total_players = local_player_number + remote_player_number;
     DebugMessage(M64MSG_INFO, "Network: Players count is %d", total_players);
     
@@ -99,13 +100,13 @@ void init_player_inputs()
     {
         first_local_player_index = 0;
         last_local_player_index = local_player_number - 1;
-        for (int i = 0; i < local_player_number; i++)
+        for (i = 0; i < local_player_number; i++)
         {
             network_players[i].player_input_mode = IS_LOCAL;
             network_players[i].player_local_channel = i;
             DebugMessage(M64MSG_INFO, "Network: Player %d is local", i);
         }
-        for (int i = local_player_number; i < total_players; i++)
+        for (i = local_player_number; i < total_players; i++)
         {
             network_players[i].player_input_mode = IS_REMOTE;
             DebugMessage(M64MSG_INFO, "Network: Player %d is remote", i);
@@ -115,12 +116,12 @@ void init_player_inputs()
     {
         first_local_player_index = remote_player_number;
         last_local_player_index = total_players - 1;
-        for (int i = 0; i < remote_player_number; i++)
+        for (i = 0; i < remote_player_number; i++)
         {
             network_players[i].player_input_mode = IS_REMOTE;
             DebugMessage(M64MSG_INFO, "Network: Player %d is remote", i);
         }
-        for (int i = remote_player_number; i < total_players; i++)
+        for (i = remote_player_number; i < total_players; i++)
         {
             network_players[i].player_input_mode = IS_LOCAL;
             network_players[i].player_local_channel = i - remote_player_number;
@@ -345,9 +346,9 @@ int set_blocking(int fd, int blocking)
     return (ioctlsocket(fd, FIONBIO, &mode) == 0) ? 1 : 0;
 #else
     int flags = fcntl(fd, F_GETFL, 0);
-    if (flags < 0) return false;
+    if (flags < 0) return 0;
     flags = blocking ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK);
-    return (fcntl(fd, F_SETFL, flags) == 0) ? true : false;
+    return (fcntl(fd, F_SETFL, flags) == 0) ? 1 : 0;
 #endif
 }
 
@@ -388,8 +389,9 @@ void send_remote_input(uint32_t input, uint16_t channel)
 
 void read_network_input(BIT_STREAM *bstream)
 {
+    int i;
     remote_current_frame = BitStream_read_uint32(bstream);
-    for (int i = 0; i < remote_player_number; i++)
+    for (i = 0; i < remote_player_number; i++)
     {
         uint16_t channel = BitStream_read_uint16(bstream);
         set_remote_input(BitStream_read_uint32(bstream), channel);

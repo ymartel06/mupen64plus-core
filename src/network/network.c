@@ -33,7 +33,7 @@ uint32_t remote_current_frame = 0; // store the frame number for the last remote
 //for the server
 int client_is_ready = -1;
 uint32_t clock_diff;
-uint16_t remote_clock_per_second;
+uint32_t remote_clock_per_second;
 
 //for the client
 int server_game_start = 0;
@@ -155,7 +155,6 @@ int launch_server(int port, int local_player_nb)
             client_socket = accept(server_socket, (struct sockaddr*)&their_addr, &socksize);
             if (client_socket != INVALID_SOCKET) {
                 client_is_connected = 1;
-                int socket_status = 1;
 
                 get_ip_str((struct sockaddr*)&their_addr, str, INET6_ADDRSTRLEN);
 
@@ -271,7 +270,7 @@ int init_connection_server(int port)
 {
     struct sockaddr_in serv; /* socket info about our server */
     SOCKET sock = SOCKET_ERROR;
-    struct addrinfo hints, *res = NULL;
+    struct addrinfo hints;
     int reuseaddr = 1;
 
     // Get the address info 
@@ -426,7 +425,7 @@ int send_welcome_back(SOCKET sock, uint32_t remote_clock)
     BitStream_write_uint16(send_stream, local_player_number);	//number of player in local
     BitStream_write_uint32(send_stream, remote_clock);	//remote clock for the ping
     BitStream_write_uint32(send_stream, clock());		//current clock to estimate the difference between clocks
-    BitStream_write_uint16(send_stream, CLOCKS_PER_SEC);		//send the clocks per sec to 
+    BitStream_write_uint32(send_stream, CLOCKS_PER_SEC);		//send the clocks per sec to 
     BitStream_write_uint32(send_stream, MUPEN_CORE_VERSION); //check if the core version is the same
     BitStream_write_char_array(send_stream, ROM_SETTINGS.MD5, 32);
     return write_socket(sock, send_stream);
@@ -438,7 +437,7 @@ void read_welcome_back(BIT_STREAM *bstream, SOCKET sock)
     remote_player_number = BitStream_read_uint16(bstream);
     uint32_t local_clock = BitStream_read_uint32(bstream);
     uint32_t remote_clock = BitStream_read_uint32(bstream);
-    remote_clock_per_second = BitStream_read_uint16(bstream);
+    remote_clock_per_second = BitStream_read_uint32(bstream);
     time_delay = one_way_ping(clock(), local_clock);
     frame_delay = time_delay / simulated_tick_time;
 
@@ -536,7 +535,7 @@ int send_game_start(SOCKET sock)
     BitStream_write_uint16(send_stream, GAME_START);
     start = clock() + (3000 * CLOCKS_PER_SEC / 1000);
     float clock_ratio = (float)remote_clock_per_second / CLOCKS_PER_SEC;
-    uint32_t clock_estimate_diff = (float)clock_diff * clock_ratio; //we want the result in uint32_t, no need of the precision
+    uint32_t clock_estimate_diff = clock_diff * clock_ratio; //we want the result in uint32_t, no need of the precision
     uint32_t client_start = clock() + (3000 * CLOCKS_PER_SEC / 1000) + clock_estimate_diff; //boot in 3s 
     BitStream_write_uint32(send_stream, client_start);
     BitStream_write_uint16(send_stream, time_delay);
